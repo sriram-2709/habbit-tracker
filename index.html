@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Premium digital habit tracker planner — track daily, weekly, and monthly habits with elegant design.">
+  <title>Habit Tracker — Digital Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <!-- Floating mobile menu -->
+  <button type="button" class="fab-menu" id="fabMenu" aria-label="Open navigation menu" aria-expanded="false">
+    <span class="fab-icon"></span>
+  </button>
+
+  <!-- Mobile sidebar overlay -->
+  <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
+
+  <div class="app" id="app">
+
+    <!-- ========== STICKY HEADER ========== -->
+    <header class="header" role="banner">
+      <div class="header__brand">
+        <h1 class="header__month" id="headerMonth">January</h1>
+        <span class="header__year-label" id="headerYear">2026</span>
+      </div>
+
+      <div class="header__controls">
+        <div class="header__select-group">
+          <label for="monthSelect" class="visually-hidden">Select month</label>
+          <select id="monthSelect" class="select select--elegant" aria-label="Select month"></select>
+
+          <label for="yearSelect" class="visually-hidden">Select year</label>
+          <select id="yearSelect" class="select select--elegant" aria-label="Select year"></select>
+        </div>
+
+        <div class="header__datetime" aria-live="polite">
+          <time id="currentDate" class="header__date"></time>
+          <span class="header__divider" aria-hidden="true">·</span>
+          <span id="liveClock" class="header__clock"></span>
+        </div>
+      </div>
+
+      <div class="header__actions">
+        <div class="toolbar" role="toolbar" aria-label="Planner actions">
+          <button type="button" class="btn btn--icon" id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 10h10a5 5 0 0 1 5 5v2M3 10l4-4M3 10l4 4"/></svg>
+          </button>
+          <button type="button" class="btn btn--icon" id="redoBtn" title="Redo (Ctrl+Y)" aria-label="Redo">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 10H11a5 5 0 0 0-5 5v2M21 10l-4-4M21 10l-4 4"/></svg>
+          </button>
+          <button type="button" class="btn btn--icon" id="searchToggle" title="Search habits" aria-label="Search habits">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <div class="search-box" id="searchBox" hidden>
+            <input type="search" id="habitSearch" class="input" placeholder="Search habits…" aria-label="Search habits">
+          </div>
+          <button type="button" class="btn btn--icon" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+            <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+        </div>
+
+        <div class="dropdown">
+          <button type="button" class="btn btn--secondary" id="exportMenuBtn" aria-haspopup="true" aria-expanded="false">
+            Export
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div class="dropdown__menu" id="exportMenu" role="menu" hidden>
+            <button type="button" class="dropdown__item" role="menuitem" data-export="json">Export JSON</button>
+            <button type="button" class="dropdown__item" role="menuitem" data-export="csv">Export CSV</button>
+            <button type="button" class="dropdown__item" role="menuitem" data-export="pdf">Export PDF</button>
+            <button type="button" class="dropdown__item" role="menuitem" data-export="print">Print Planner</button>
+          </div>
+        </div>
+        <label class="btn btn--secondary btn--file">
+          Import JSON
+          <input type="file" id="importFile" accept=".json" hidden>
+        </label>
+
+        <div class="sync-status" id="syncStatus" title="Cloud sync status" aria-live="polite">
+          <span class="sync-status__dot" id="syncStatusDot" aria-hidden="true"></span>
+          <span class="sync-status__text" id="syncStatusText">Local only</span>
+        </div>
+
+        <button type="button" class="btn btn--secondary btn--sm" id="authBtn" aria-haspopup="dialog">Sign In</button>
+      </div>
+    </header>
+
+    <!-- Auth Modal -->
+    <div class="auth-modal" id="authModal" role="dialog" aria-labelledby="authModalTitle" aria-modal="true" hidden>
+      <div class="auth-modal__backdrop" id="authModalBackdrop"></div>
+      <div class="auth-modal__panel">
+        <button type="button" class="auth-modal__close" id="authModalClose" aria-label="Close">&times;</button>
+        <h2 class="auth-modal__title" id="authModalTitle">Cloud Sync</h2>
+        <p class="auth-modal__desc">Sign in to sync your habit data across devices.</p>
+        <p class="auth-modal__user" id="authUserInfo" hidden></p>
+
+        <form class="auth-form" id="authForm">
+          <div class="auth-form__field">
+            <label for="authEmail" class="label">Email</label>
+            <input type="email" id="authEmail" class="input auth-form__input" placeholder="you@example.com" required autocomplete="email">
+          </div>
+          <div class="auth-form__field">
+            <label for="authPassword" class="label">Password</label>
+            <input type="password" id="authPassword" class="input auth-form__input" placeholder="••••••••" required minlength="6" autocomplete="current-password">
+          </div>
+          <p class="auth-form__error" id="authError" hidden></p>
+          <div class="auth-form__actions">
+            <button type="submit" class="btn btn--primary" id="authSignInBtn">Sign In</button>
+            <button type="button" class="btn btn--secondary" id="authSignUpBtn">Create Account</button>
+          </div>
+        </form>
+
+        <button type="button" class="btn btn--ghost btn--sm auth-modal__signout" id="authSignOutBtn" hidden>Sign Out</button>
+      </div>
+    </div>
+
+    <!-- ========== MAIN GRID LAYOUT ========== -->
+    <main class="main-grid" id="main-content">
+
+      <!-- LEFT SIDEBAR -->
+      <aside class="sidebar sidebar--left" id="leftSidebar" aria-label="Navigation sidebar">
+        <div class="card card--assistant">
+          <div class="card__header">
+            <span class="card__icon" aria-hidden="true">✦</span>
+            <h2 class="card__title">Virtual Assistant</h2>
+          </div>
+          <p class="assistant__greeting" id="assistantGreeting">Good morning! Ready to build great habits today?</p>
+          <div class="assistant__tips" id="assistantTips"></div>
+        </div>
+
+        <div class="card card--quote" id="quoteCard">
+          <blockquote class="quote" id="inspirationalQuote">
+            <p class="quote__text"></p>
+            <footer class="quote__author"></footer>
+          </blockquote>
+        </div>
+
+        <div class="card">
+          <h2 class="card__title">Daily Habits</h2>
+          <ul class="habit-list" id="sidebarDailyList" aria-label="Daily habits overview"></ul>
+        </div>
+
+        <div class="card">
+          <h2 class="card__title">Weekly Summary</h2>
+          <div class="mini-stats" id="sidebarWeeklySummary"></div>
+        </div>
+
+        <div class="card">
+          <h2 class="card__title">Monthly Summary</h2>
+          <div class="mini-stats" id="sidebarMonthlySummary"></div>
+        </div>
+
+        <div class="card card--filters">
+          <h2 class="card__title">Filters</h2>
+          <div class="filter-group">
+            <button type="button" class="btn btn--filter active" data-filter="all" aria-pressed="true">All</button>
+            <button type="button" class="btn btn--filter" data-filter="completed" aria-pressed="false">Completed</button>
+            <button type="button" class="btn btn--filter" data-filter="incomplete" aria-pressed="false">Incomplete</button>
+          </div>
+          <div class="sort-group">
+            <label for="sortSelect" class="label">Sort by</label>
+            <select id="sortSelect" class="select">
+              <option value="default">Default order</option>
+              <option value="name">Name A–Z</option>
+              <option value="progress-desc">Progress (high)</option>
+              <option value="progress-asc">Progress (low)</option>
+            </select>
+          </div>
+          <div class="action-group">
+            <button type="button" class="btn btn--ghost btn--sm" id="resetMonthBtn">Reset Month</button>
+            <button type="button" class="btn btn--ghost btn--sm btn--danger" id="clearAllBtn">Clear All</button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- CENTER CONTENT -->
+      <section class="center-content">
+
+        <!-- Notes Section -->
+        <section class="card card--notes" aria-labelledby="notesHeading">
+          <h2 class="card__title" id="notesHeading">Notes</h2>
+          <div class="notes-grid">
+            <div class="note-box">
+              <label for="note1" class="note-box__label">Quick Notes</label>
+              <textarea id="note1" class="note-box__input" rows="4" placeholder="Jot down thoughts, reminders, or goals…" aria-label="Quick notes"></textarea>
+              <span class="autosave-indicator" aria-live="polite">Saved</span>
+            </div>
+            <div class="note-box">
+              <label for="note2" class="note-box__label">Priorities</label>
+              <textarea id="note2" class="note-box__input" rows="4" placeholder="What matters most this month?" aria-label="Priorities"></textarea>
+              <span class="autosave-indicator" aria-live="polite">Saved</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Weekly Progress Circles -->
+        <section class="card" aria-labelledby="weeklyCirclesHeading">
+          <h2 class="card__title" id="weeklyCirclesHeading">Weekly Progress</h2>
+          <div class="week-circles" id="weekCircles" role="group" aria-label="Weekly progress circles"></div>
+        </section>
+
+        <!-- Daily Habit Tracker -->
+        <section class="card card--tracker" aria-labelledby="dailyTrackerHeading">
+          <div class="card__header card__header--spread">
+            <h2 class="card__title" id="dailyTrackerHeading">Daily Habit Tracker</h2>
+            <span class="tracker-meta" id="dailyTrackerMeta"></span>
+          </div>
+          <div class="table-scroll" role="region" aria-label="Daily habit tracker table" tabindex="0">
+            <table class="tracker-table" id="dailyTrackerTable">
+              <thead id="dailyTrackerHead"></thead>
+              <tbody id="dailyTrackerBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Weekly Habit Tracker -->
+        <section class="card card--tracker" aria-labelledby="weeklyTrackerHeading">
+          <div class="card__header card__header--spread">
+            <h2 class="card__title" id="weeklyTrackerHeading">Weekly Habit Tracker</h2>
+            <span class="tracker-meta" id="weeklyTrackerMeta"></span>
+          </div>
+          <div class="table-scroll" role="region" aria-label="Weekly habit tracker table" tabindex="0">
+            <table class="tracker-table tracker-table--weekly" id="weeklyTrackerTable">
+              <thead id="weeklyTrackerHead"></thead>
+              <tbody id="weeklyTrackerBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Monthly Progress Tracker -->
+        <section class="card" aria-labelledby="monthlyProgressHeading">
+          <h2 class="card__title" id="monthlyProgressHeading">Monthly Progress</h2>
+          <div class="monthly-stats-grid" id="monthlyStatsGrid"></div>
+          <div class="chart-container">
+            <h3 class="chart-title">Monthly Completion</h3>
+            <canvas id="monthlyChart" width="600" height="200" role="img" aria-label="Monthly completion bar chart"></canvas>
+          </div>
+          <div class="chart-container">
+            <h3 class="chart-title">Progress Trend</h3>
+            <canvas id="trendChart" width="600" height="180" role="img" aria-label="Progress trend line chart"></canvas>
+          </div>
+        </section>
+
+        <!-- Reflection Section -->
+        <section class="card card--journal" aria-labelledby="reflectionHeading">
+          <div class="card__header card__header--spread">
+            <h2 class="card__title" id="reflectionHeading">Reflection Notes</h2>
+            <div class="journal-stats">
+              <span id="wordCount">0 words</span>
+              <span aria-hidden="true">·</span>
+              <span id="charCount">0 characters</span>
+            </div>
+          </div>
+          <textarea id="journal" class="journal__input" rows="8" placeholder="Reflect on your progress, wins, and lessons learned this month…" aria-label="Reflection journal"></textarea>
+          <div class="journal__actions">
+            <button type="button" class="btn btn--secondary" id="exportJournalBtn">Export Journal</button>
+            <span class="autosave-indicator" aria-live="polite">Saved</span>
+          </div>
+        </section>
+      </section>
+
+      <!-- RIGHT SIDEBAR -->
+      <aside class="sidebar sidebar--right" id="rightSidebar" aria-label="Progress sidebar">
+
+        <!-- Daily Summary -->
+        <div class="card card--summary">
+          <h2 class="card__title">Daily Summary</h2>
+          <div class="summary-ring-wrap">
+            <svg class="progress-ring" id="dailyProgressRing" viewBox="0 0 120 120" role="img" aria-label="Daily progress ring">
+              <circle class="progress-ring__bg" cx="60" cy="60" r="52"/>
+              <circle class="progress-ring__fill" cx="60" cy="60" r="52"/>
+              <text class="progress-ring__text" x="60" y="56" text-anchor="middle" id="ringPercent">0%</text>
+              <text class="progress-ring__label" x="60" y="72" text-anchor="middle">Today</text>
+            </svg>
+          </div>
+          <div class="summary-stats" id="dailySummaryStats"></div>
+        </div>
+
+        <!-- Top 10 Habits -->
+        <div class="card">
+          <h2 class="card__title">Top 10 Habits</h2>
+          <ol class="top-habits" id="topHabitsList" aria-label="Top habits by completion"></ol>
+        </div>
+
+        <!-- Daily Progress Table -->
+        <div class="card">
+          <h2 class="card__title">Daily Progress</h2>
+          <div class="table-scroll table-scroll--compact" role="region" aria-label="Daily progress summary" tabindex="0">
+            <table class="progress-table" id="dailyProgressTable">
+              <thead>
+                <tr>
+                  <th scope="col">Habit</th>
+                  <th scope="col">%</th>
+                  <th scope="col">Done</th>
+                  <th scope="col">Left</th>
+                </tr>
+              </thead>
+              <tbody id="dailyProgressBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Weekly Progress Chart -->
+        <div class="card">
+          <h2 class="card__title">Weekly Progress</h2>
+          <canvas id="weeklyChart" width="320" height="200" role="img" aria-label="Weekly completion chart"></canvas>
+        </div>
+      </aside>
+    </main>
+
+    <!-- Toast notifications -->
+    <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+  </div>
+
+  <!-- Print-only template -->
+  <div class="print-only" id="printArea" hidden></div>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
