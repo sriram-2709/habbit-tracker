@@ -4,7 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Premium digital habit tracker planner — track daily, weekly, and monthly habits with elegant design.">
+  <link rel="icon" type="image/png" href="assets/logo.png">
   <title>Habit Tracker — Digital Planner</title>
+  <!-- 
+    ============================================
+    USER AUTHENTICATION ENABLED
+    ============================================
+    Users must sign in at login.html first.
+    Each user gets their own isolated habit data.
+    See USER_AUTH_README.md for full details.
+    ============================================
+  -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
@@ -26,8 +36,11 @@
     <!-- ========== STICKY HEADER ========== -->
     <header class="header" role="banner">
       <div class="header__brand">
-        <h1 class="header__month" id="headerMonth">January</h1>
-        <span class="header__year-label" id="headerYear">2026</span>
+        <img src="assets/logo.png" alt="Habit Tracker" class="header__logo">
+        <div>
+          <h1 class="header__month" id="headerMonth">January</h1>
+          <span class="header__year-label" id="headerYear">2026</span>
+        </div>
       </div>
 
       <div class="header__controls">
@@ -130,6 +143,9 @@
           <div class="card__header">
             <span class="card__icon" aria-hidden="true">✦</span>
             <h2 class="card__title">Virtual Assistant</h2>
+          </div>
+          <div class="assistant__visual">
+            <img src="assets/asset.png" alt="Habit tracking illustration" class="assistant__image">
           </div>
           <p class="assistant__greeting" id="assistantGreeting">Good morning! Ready to build great habits today?</p>
           <div class="assistant__tips" id="assistantTips"></div>

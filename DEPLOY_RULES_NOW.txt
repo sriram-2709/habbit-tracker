@@ -1,0 +1,73 @@
+═══════════════════════════════════════════════════════════
+          🔥 FIX "PERMISSION DENIED" ERROR
+═══════════════════════════════════════════════════════════
+
+ERROR YOU SEE:
+  ❌ Sign up error: Error: Permission denied
+
+REASON:
+  Database rules not deployed yet
+
+═══════════════════════════════════════════════════════════
+             HOW TO FIX (2 MINUTES)
+═══════════════════════════════════════════════════════════
+
+STEP 1: Open Firebase Console
+  → https://console.firebase.google.com
+
+STEP 2: Select Your Project
+  → Click: habbittracker-38a9b
+
+STEP 3: Go to Realtime Database
+  → Left sidebar → Realtime Database
+
+STEP 4: Click "Rules" Tab
+  → At the top of the page
+
+STEP 5: Delete Everything & Paste This:
+
+{
+  "rules": {
+    ".read": "true",
+    ".write": "true"
+  }
+}
+
+STEP 6: Click "Publish"
+  → Wait for "Rules published successfully"
+
+STEP 7: Test Again
+  → Refresh your login page
+  → Try signing up
+  → ✅ Should work now!
+
+═══════════════════════════════════════════════════════════
+
+VISUAL:
+
+Firebase Console
+  └── habbittracker-38a9b
+      └── Realtime Database
+          └── Rules Tab ← YOU ARE HERE
+              │
+              ├── [Delete old rules]
+              ├── [Paste new rules above]
+              └── [Click Publish] ✅
+
+═══════════════════════════════════════════════════════════
+
+AFTER DEPLOYING:
+
+Try this in login page:
+  Email: test@example.com
+  Password: test123
+  
+Should see:
+  ✅ Account created! Redirecting...
+
+═══════════════════════════════════════════════════════════
+
+NEED MORE HELP?
+  See: FIX_PERMISSION_ERROR.md (detailed guide)
+
+═══════════════════════════════════════════════════════════

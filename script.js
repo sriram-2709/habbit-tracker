@@ -22,6 +22,37 @@ import { isFirebaseConfigured } from './firebase-config.js';
 (function () {
   'use strict';
 
+  /* ---------- Authentication Check ---------- */
+  // Redirect to login if not authenticated
+  const REQUIRE_AUTH = true; // Set to false to allow app without login
+
+  function getCurrentUser() {
+    const userJson = sessionStorage.getItem('currentUser');
+    console.log('🔍 getCurrentUser called, found:', userJson);
+    if (userJson) {
+      try {
+        const user = JSON.parse(userJson);
+        if (user && user.userId && user.email) {
+          return user;
+        }
+        console.warn('⚠️ Invalid user object in session:', user);
+        return null;
+      } catch (e) {
+        console.error('❌ Failed to parse user session:', e);
+        return null;
+      }
+    }
+    return null;
+  }
+
+  function getUserStorageKey() {
+    const user = getCurrentUser();
+    if (user && user.userId) {
+      return `${STORAGE_KEY}_${user.userId}`;
+    }
+    return STORAGE_KEY; // Default key
+  }
+
   /* ---------- Constants ---------- */
   const STORAGE_KEY = 'habitTracker_v1';
   const DAILY_HABIT_COUNT = 30;
@@ -31,6 +62,19 @@ import { isFirebaseConfigured } from './firebase-config.js';
   const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS;
   const RING_RADIUS = 52;
   const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+
+  let lastRedirectTime = 0; // Track redirects to prevent loops
+  
+  // Redirect guard - prevent redirect loops
+  function canRedirect() {
+    const now = Date.now();
+    if (now - lastRedirectTime < 2000) { // 2 second cooldown
+      console.warn('⚠️ REDIRECT BLOCKED - too soon after last redirect (loop protection)');
+      return false;
+    }
+    lastRedirectTime = now;
+    return true;
+  }
 
   const MONTHS = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -219,6 +263,15 @@ import { isFirebaseConfigured } from './firebase-config.js';
   }
 
   /* ---------- LocalStorage & Firebase ---------- */
+  /** Get user-specific storage key to prevent data collision */
+  function getUserStorageKey() {
+    const user = getCurrentUser();
+    if (user && user.userId) {
+      return `${STORAGE_KEY}_${user.userId}`;
+    }
+    return STORAGE_KEY; // Default key
+  }
+
   /** RTDB often returns arrays as objects — normalize to real arrays */
   function toArray(value) {
     if (Array.isArray(value)) return value;
@@ -300,8 +353,9 @@ import { isFirebaseConfigured } from './firebase-config.js';
     clearTimeout(saveTimeout);
     saveTimeout = setTimeout(async () => {
       const payload = { ...state, updatedAt: Date.now() };
+      const storageKey = getUserStorageKey();
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        localStorage.setItem(storageKey, JSON.stringify(payload));
         flashAutosave('Saved');
       } catch (e) {
         showToast('Unable to save — storage may be full');
@@ -315,7 +369,8 @@ import { isFirebaseConfigured } from './firebase-config.js';
 
   function loadStateFromLocal() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const storageKey = getUserStorageKey();
+      const raw = localStorage.getItem(storageKey);
       if (raw) {
         const parsed = JSON.parse(raw);
         state = { ...createDefaultState(), ...pickStateFields(parsed) };
@@ -328,7 +383,8 @@ import { isFirebaseConfigured } from './firebase-config.js';
 
   function getLocalUpdatedAt() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const storageKey = getUserStorageKey();
+      const raw = localStorage.getItem(storageKey);
       if (raw) return JSON.parse(raw).updatedAt || 0;
     } catch (e) { /* ignore */ }
     return 0;
@@ -395,11 +451,11 @@ import { isFirebaseConfigured } from './firebase-config.js';
 
     if (!authBtn) return;
 
-    if (user && !user.isAnonymous) {
+    if (user && user.email) {
       authBtn.textContent = user.email || 'Account';
       if (userInfo) {
         userInfo.hidden = false;
-        userInfo.textContent = 'Signed in as ' + (user.email || user.uid);
+        userInfo.textContent = 'Signed in as ' + user.email;
       }
       if (signOutBtn) signOutBtn.hidden = false;
       if (authForm) authForm.hidden = true;
@@ -424,104 +480,31 @@ import { isFirebaseConfigured } from './firebase-config.js';
     if (!modal) return;
     modal.hidden = true;
     document.body.classList.remove('modal-open');
-    const err = $('#authError');
-    if (err) err.hidden = true;
-  }
-
-  function showAuthError(msg) {
-    const err = $('#authError');
-    if (!err) return;
-    err.textContent = msg;
-    err.hidden = !msg;
-  }
-
-  async function handleAuthSignIn(e) {
-    e.preventDefault();
-    const email = $('#authEmail').value.trim();
-    const password = $('#authPassword').value;
-    showAuthError('');
-
-    try {
-      if (firebaseIsReady()) await saveToDatabase(state);
-      const localBackup = JSON.parse(JSON.stringify(state));
-
-      await signInWithEmail(email, password);
-      closeAuthModal();
-      showToast('Signed in — data will sync across devices');
-
-      const cloudData = await loadFromDatabase();
-      if (cloudData && normalizeCloudState(cloudData)?.updatedAt) {
-        applyRemoteState(cloudData, true);
-      } else {
-        state = localBackup;
-        ensureHabitCounts();
-        await saveToDatabase(state);
-        renderAll();
-      }
-      enableRealtimeSync();
-    } catch (err) {
-      showAuthError(getAuthErrorMessage(err));
-    }
-  }
-
-  async function handleAuthSignUp() {
-    const email = $('#authEmail').value.trim();
-    const password = $('#authPassword').value;
-    showAuthError('');
-
-    if (password.length < 6) {
-      showAuthError('Password must be at least 6 characters.');
-      return;
-    }
-
-    try {
-      await signUpWithEmail(email, password);
-      await saveToDatabase(state);
-      closeAuthModal();
-      showToast('Account created — your data is now in the cloud');
-      enableRealtimeSync();
-    } catch (err) {
-      showAuthError(getAuthErrorMessage(err));
-    }
-  }
-
-  async function handleAuthSignOut() {
-    try {
-      await signOutUser();
-      closeAuthModal();
-      showToast('Signed out — using local anonymous session');
-      enableRealtimeSync();
-    } catch (err) {
-      showAuthError(getAuthErrorMessage(err));
-    }
-  }
-
-  function getAuthErrorMessage(err) {
-    const code = err?.code || '';
-    const messages = {
-      'auth/invalid-email': 'Invalid email address.',
-      'auth/user-disabled': 'This account has been disabled.',
-      'auth/user-not-found': 'No account found with this email.',
-      'auth/wrong-password': 'Incorrect password.',
-      'auth/email-already-in-use': 'Email already in use. Try signing in.',
-      'auth/weak-password': 'Password must be at least 6 characters.',
-      'auth/invalid-credential': 'Invalid email or password.',
-      'auth/credential-already-in-use': 'This email is linked to another account.'
-    };
-    return messages[code] || err.message || 'Authentication failed.';
   }
 
   function bindAuthEvents() {
     $('#authBtn')?.addEventListener('click', openAuthModal);
     $('#authModalClose')?.addEventListener('click', closeAuthModal);
     $('#authModalBackdrop')?.addEventListener('click', closeAuthModal);
-    $('#authForm')?.addEventListener('submit', handleAuthSignIn);
-    $('#authSignUpBtn')?.addEventListener('click', handleAuthSignUp);
     $('#authSignOutBtn')?.addEventListener('click', handleAuthSignOut);
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !$('#authModal')?.hidden) closeAuthModal();
     });
+  }
+
+  async function handleAuthSignOut() {
+    try {
+      console.log('🔄 Signing out...');
+      sessionStorage.removeItem('currentUser');
+      showToast('Signed out successfully');
+      setTimeout(() => {
+        window.location.href = 'login.html';
+      }, 500);
+    } catch (error) {
+      console.error('❌ Sign out error:', error);
+      showToast('Sign out failed');
+    }
   }
 
   /* ---------- Calculations ---------- */
@@ -1548,27 +1531,27 @@ import { isFirebaseConfigured } from './firebase-config.js';
       }
     });
 
-    $('#note1').addEventListener('input', handleNotesInput);
-    $('#note2').addEventListener('input', handleNotesInput);
-    $('#journal').addEventListener('input', handleJournalInput);
+    $('#note1')?.addEventListener('input', handleNotesInput);
+    $('#note2')?.addEventListener('input', handleNotesInput);
+    $('#journal')?.addEventListener('input', handleJournalInput);
 
-    $('#monthSelect').addEventListener('change', handleMonthYearChange);
-    $('#yearSelect').addEventListener('change', handleMonthYearChange);
+    $('#monthSelect')?.addEventListener('change', handleMonthYearChange);
+    $('#yearSelect')?.addEventListener('change', handleMonthYearChange);
 
-    $('#undoBtn').addEventListener('click', undo);
-    $('#redoBtn').addEventListener('click', redo);
-    $('#themeToggle').addEventListener('click', toggleTheme);
-    $('#resetMonthBtn').addEventListener('click', resetMonth);
-    $('#clearAllBtn').addEventListener('click', clearAll);
-    $('#exportJournalBtn').addEventListener('click', exportJournal);
+    $('#undoBtn')?.addEventListener('click', undo);
+    $('#redoBtn')?.addEventListener('click', redo);
+    $('#themeToggle')?.addEventListener('click', toggleTheme);
+    $('#resetMonthBtn')?.addEventListener('click', resetMonth);
+    $('#clearAllBtn')?.addEventListener('click', clearAll);
+    $('#exportJournalBtn')?.addEventListener('click', exportJournal);
 
-    $('#searchToggle').addEventListener('click', () => {
+    $('#searchToggle')?.addEventListener('click', () => {
       const box = $('#searchBox');
-      box.hidden = !box.hidden;
-      if (!box.hidden) $('#habitSearch').focus();
+      if (box) box.hidden = !box.hidden;
+      if (box && !box.hidden) $('#habitSearch')?.focus();
     });
 
-    $('#habitSearch').addEventListener('input', (e) => {
+    $('#habitSearch')?.addEventListener('input', (e) => {
       searchQuery = e.target.value;
       renderDailyTracker();
       renderWeeklyTracker();
@@ -1588,7 +1571,7 @@ import { isFirebaseConfigured } from './firebase-config.js';
       });
     });
 
-    $('#sortSelect').addEventListener('change', (e) => {
+    $('#sortSelect')?.addEventListener('change', (e) => {
       sortMode = e.target.value;
       renderDailyTracker();
       renderWeeklyTracker();
@@ -1596,44 +1579,45 @@ import { isFirebaseConfigured } from './firebase-config.js';
 
     const exportBtn = $('#exportMenuBtn');
     const exportMenu = $('#exportMenu');
-    exportBtn.addEventListener('click', () => {
+    exportBtn?.addEventListener('click', () => {
+      if (!exportMenu) return;
       const hidden = exportMenu.hidden;
       exportMenu.hidden = !hidden;
       exportBtn.setAttribute('aria-expanded', !hidden);
     });
 
     document.addEventListener('click', (e) => {
-      if (!exportBtn.contains(e.target) && !exportMenu.contains(e.target)) {
+      if (exportBtn && exportMenu && !exportBtn.contains(e.target) && !exportMenu.contains(e.target)) {
         exportMenu.hidden = true;
         exportBtn.setAttribute('aria-expanded', 'false');
       }
     });
 
-    exportMenu.addEventListener('click', (e) => {
+    exportMenu?.addEventListener('click', (e) => {
       const type = e.target.dataset?.export;
       if (!type) return;
-      exportMenu.hidden = true;
+      if (exportMenu) exportMenu.hidden = true;
       if (type === 'json') exportJSON();
       if (type === 'csv') exportCSV();
       if (type === 'pdf') exportPDF();
       if (type === 'print') window.print();
     });
 
-    $('#importFile').addEventListener('change', (e) => {
+    $('#importFile')?.addEventListener('change', (e) => {
       if (e.target.files[0]) importJSON(e.target.files[0]);
       e.target.value = '';
     });
 
-    $('#fabMenu').addEventListener('click', () => {
+    $('#fabMenu')?.addEventListener('click', () => {
       const left = $('#leftSidebar');
-      toggleMobileSidebar(left.classList.contains('open') ? 'right' : 'left');
+      if (left) toggleMobileSidebar(left.classList.contains('open') ? 'right' : 'left');
     });
 
-    $('#sidebarOverlay').addEventListener('click', () => {
-      $('#leftSidebar').classList.remove('open');
-      $('#rightSidebar').classList.remove('open');
-      $('#sidebarOverlay').classList.remove('visible');
-      $('#fabMenu').setAttribute('aria-expanded', 'false');
+    $('#sidebarOverlay')?.addEventListener('click', () => {
+      $('#leftSidebar')?.classList.remove('open');
+      $('#rightSidebar')?.classList.remove('open');
+      $('#sidebarOverlay')?.classList.remove('visible');
+      $('#fabMenu')?.setAttribute('aria-expanded', 'false');
     });
 
     document.addEventListener('keydown', handleKeyboard);
@@ -1663,6 +1647,57 @@ import { isFirebaseConfigured } from './firebase-config.js';
   /* ---------- Initialize ---------- */
   async function init() {
     try {
+      // Check authentication requirement
+      if (REQUIRE_AUTH) {
+        console.log('🔐 Authentication required, checking session...');
+        
+        // Wait a tiny bit for sessionStorage to be fully ready
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        const sessionData = sessionStorage.getItem('currentUser');
+        console.log('📦 Session data:', sessionData);
+        
+        const user = getCurrentUser();
+        console.log('👤 Parsed user:', user);
+        
+        if (!user || !user.userId || !user.email) {
+          console.log('❌ No valid user session found, redirecting to login...');
+          // Delay to ensure we're not in a redirect loop
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          if (canRedirect()) {
+            window.location.href = 'login.html';
+          } else {
+            console.error('🚫 REDIRECT LOOP DETECTED - Please refresh the page manually');
+            document.body.innerHTML = '<div style="padding: 2rem; text-align: center;"><h1>⚠️ Redirect Loop Detected</h1><p>Please <a href="login.html">click here to sign in</a> or refresh the page.</p><button onclick="sessionStorage.clear(); location.reload();">Clear Session & Reload</button></div>';
+          }
+          return;
+        }
+        console.log('✅ User authenticated:', user.email, '(ID:', user.userId + ')');
+      }
+
+      // Initialize Firebase first
+      if (!isFirebaseConfigured()) {
+        loadStateFromLocal();
+        populateMonthYearSelects();
+        document.documentElement.setAttribute('data-theme', state.theme);
+        bindEvents();
+        bindAuthEvents();
+        renderAll();
+        updateUndoRedoButtons();
+        startClock();
+        updateSyncUI('offline', 'Local only');
+        return;
+      }
+
+      setRemoteUpdateHandler((data) => applyRemoteState(data, true));
+      setAuthChangeHandler(updateAuthUI);
+      setSyncStatusHandler(updateSyncUI);
+
+      // Initialize Firebase
+      const fbReady = await initFirebase();
+      
+      // Load app
       loadStateFromLocal();
       populateMonthYearSelects();
       document.documentElement.setAttribute('data-theme', state.theme);
@@ -1672,44 +1707,42 @@ import { isFirebaseConfigured } from './firebase-config.js';
       updateUndoRedoButtons();
       startClock();
 
-      if (!isFirebaseConfigured()) {
-        updateSyncUI('offline', 'Local only');
-        return;
-      }
-
-      setRemoteUpdateHandler((data) => applyRemoteState(data, true));
-      setAuthChangeHandler(updateAuthUI);
-      setSyncStatusHandler(updateSyncUI);
-
-      const fbReady = await initFirebase();
-      if (!fbReady) return;
-
       const user = getCurrentUser();
       if (user) updateAuthUI(user);
 
-      const cloudData = await loadFromDatabase();
-      const localUpdatedAt = getLocalUpdatedAt();
+      if (fbReady) {
+        const cloudData = await loadFromDatabase();
+        const localUpdatedAt = getLocalUpdatedAt();
 
-      if (cloudData) {
-        const normalized = normalizeCloudState(cloudData);
-        const cloudUpdatedAt = normalized?.updatedAt || 0;
-        if (cloudUpdatedAt >= localUpdatedAt) {
-          applyRemoteState(cloudData, true);
-        } else {
+        if (cloudData) {
+          const normalized = normalizeCloudState(cloudData);
+          const cloudUpdatedAt = normalized?.updatedAt || 0;
+          if (cloudUpdatedAt >= localUpdatedAt) {
+            applyRemoteState(cloudData, true);
+          } else {
+            await saveToDatabase(state);
+          }
+        } else if (localUpdatedAt > 0) {
           await saveToDatabase(state);
         }
-      } else if (localUpdatedAt > 0) {
-        await saveToDatabase(state);
-      }
 
-      enableRealtimeSync();
+        enableRealtimeSync();
+      }
     } catch (err) {
       console.error('App init failed:', err);
+      if (REQUIRE_AUTH && isFirebaseConfigured()) {
+        window.location.href = 'login.html';
+        return;
+      }
       state = createDefaultState();
       ensureHabitCounts();
       populateMonthYearSelects();
       document.documentElement.setAttribute('data-theme', state.theme);
+      bindEvents();
+      bindAuthEvents();
       renderAll();
+      updateUndoRedoButtons();
+      startClock();
       updateSyncUI('error', 'Recovered from error');
       showToast('App recovered — data reset to defaults');
     }

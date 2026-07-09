@@ -207,6 +207,19 @@ body {
 
 .header__brand {
   display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header__logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.header__brand > div {
+  display: flex;
   align-items: baseline;
   gap: 10px;
 }
@@ -345,6 +358,26 @@ body {
 /* Assistant Card */
 .card--assistant {
   background: linear-gradient(135deg, var(--accent-soft), var(--bg-card));
+}
+
+.assistant__visual {
+  margin: -16px -16px 16px;
+  overflow: hidden;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.assistant__image {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+  max-height: 180px;
+  opacity: 0.9;
+  transition: opacity var(--transition);
+}
+
+.assistant__image:hover {
+  opacity: 1;
 }
 
 .assistant__greeting {

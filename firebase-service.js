@@ -1,17 +1,7 @@
 /**
- * Firebase Realtime Database service — auth, load, save, realtime sync
+ * Firebase Realtime Database service — database-based auth, load, save, realtime sync
  */
 import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-import {
-  getAuth,
-  onAuthStateChanged,
-  signInAnonymously,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  linkWithCredential,
-  EmailAuthProvider
-} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
   getDatabase,
   ref,
@@ -24,7 +14,6 @@ import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js';
 const DATA_PATH = 'habitTracker';
 
 let app = null;
-let auth = null;
 let db = null;
 let currentUser = null;
 let unsubscribeSnapshot = null;
@@ -41,6 +30,16 @@ export function firebaseIsReady() {
 }
 
 export function getCurrentUser() {
+  if (!currentUser) {
+    const userJson = sessionStorage.getItem('currentUser');
+    if (userJson) {
+      try {
+        currentUser = JSON.parse(userJson);
+      } catch (e) {
+        currentUser = null;
+      }
+    }
+  }
   return currentUser;
 }
 
@@ -66,7 +65,8 @@ function setSyncStatus(status, message) {
 }
 
 function getUserDataRef(uid) {
-  return ref(db, `users/${uid}/${DATA_PATH}`);
+  // Each user gets their own isolated data path - no collision possible
+  return ref(db, `users/${uid}/habitTracker`);
 }
 
 function subscribeToUserData(uid) {
@@ -116,41 +116,19 @@ export async function initFirebase() {
   authReadyPromise = new Promise((resolve) => {
     try {
       app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-      auth = getAuth(app);
       db = getDatabase(app);
       syncReady = false;
 
-      let settled = false;
-      const finish = (ok) => {
-        if (settled) return;
-        settled = true;
-        resolve(ok);
-      };
+      // Get current user from session
+      currentUser = getCurrentUser();
+      
+      if (currentUser && currentUser.userId) {
+        subscribeToUserData(currentUser.userId);
+        if (onAuthChange) onAuthChange(currentUser);
+        setSyncStatus('synced', 'Connected');
+      }
 
-      onAuthStateChanged(auth, async (user) => {
-        currentUser = user;
-
-        if (user) {
-          subscribeToUserData(user.uid);
-          if (onAuthChange) onAuthChange(user);
-          setSyncStatus('synced', 'Connected');
-          finish(true);
-          return;
-        }
-
-        try {
-          setSyncStatus('syncing', 'Signing in…');
-          await signInAnonymously(auth);
-        } catch (err) {
-          console.error('Anonymous sign-in failed:', err);
-          setSyncStatus('error', 'Auth failed');
-          finish(false);
-        }
-      }, (err) => {
-        console.error('Auth state error:', err);
-        setSyncStatus('error', 'Auth error');
-        finish(false);
-      });
+      resolve(true);
     } catch (err) {
       console.error('Firebase init failed:', err);
       setSyncStatus('error', 'Firebase init failed');
@@ -162,11 +140,14 @@ export async function initFirebase() {
 }
 
 export async function loadFromDatabase() {
-  if (!firebaseIsReady() || !currentUser) return null;
+  if (!firebaseIsReady()) return null;
+  
+  const user = getCurrentUser();
+  if (!user || !user.userId) return null;
 
   try {
     setSyncStatus('syncing', 'Loading…');
-    const snapshot = await get(getUserDataRef(currentUser.uid));
+    const snapshot = await get(getUserDataRef(user.userId));
     const data = snapshot.val();
 
     if (!data) {
@@ -184,7 +165,10 @@ export async function loadFromDatabase() {
 }
 
 export async function saveToDatabase(state) {
-  if (!firebaseIsReady() || !currentUser || isApplyingRemote) return false;
+  if (!firebaseIsReady() || isApplyingRemote) return false;
+  
+  const user = getCurrentUser();
+  if (!user || !user.userId) return false;
 
   try {
     setSyncStatus('syncing', 'Saving…');
@@ -201,7 +185,7 @@ export async function saveToDatabase(state) {
       updatedAt: lastLocalSaveAt
     };
 
-    await set(getUserDataRef(currentUser.uid), payload);
+    await set(getUserDataRef(user.userId), payload);
 
     setSyncStatus('synced', 'Saved to cloud');
     return true;
@@ -217,6 +201,14 @@ export async function signInWithEmail(email, password) {
   syncReady = false;
   setSyncStatus('syncing', 'Signing in…');
 
+  // Sign out any existing user first to prevent data collision
+  if (auth.currentUser) {
+    if (unsubscribeSnapshot) {
+      unsubscribeSnapshot();
+      unsubscribeSnapshot = null;
+    }
+  }
+
   const credential = await signInWithEmailAndPassword(auth, email, password);
   setSyncStatus('synced', 'Signed in');
   return credential.user;
@@ -228,12 +220,14 @@ export async function signUpWithEmail(email, password) {
 
   const user = auth.currentUser;
   if (user && user.isAnonymous) {
+    // Link anonymous account data to new email account
     const credential = EmailAuthProvider.credential(email, password);
     const linked = await linkWithCredential(user, credential);
     setSyncStatus('synced', 'Account created');
     return linked.user;
   }
 
+  // Create new account - will automatically get isolated data path
   const credential = await createUserWithEmailAndPassword(auth, email, password);
   setSyncStatus('synced', 'Account created');
   return credential.user;

@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Sign in to your Habit Tracker account">
+  <link rel="icon" type="image/png" href="assets/logo.png">
+  <title>Login — Habit Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
+      --font-serif: 'Cormorant Garamond', Georgia, serif;
+      --color-primary: #6366f1;
+      --color-primary-dark: #4f46e5;
+      --color-bg: #fafafa;
+      --color-surface: #ffffff;
+      --color-text: #1f2937;
+      --color-text-light: #6b7280;
+      --color-border: #e5e7eb;
+      --color-error: #ef4444;
+      --color-success: #10b981;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    [data-theme="dark"] {
+      --color-bg: #0f172a;
+      --color-surface: #1e293b;
+      --color-text: #f1f5f9;
+      --color-text-light: #94a3b8;
+      --color-border: #334155;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-bg);
+      color: var(--color-text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      transition: background-color 0.3s ease;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 440px;
+    }
+
+    .login-card {
+      background: var(--color-surface);
+      border-radius: 16px;
+      box-shadow: var(--shadow-lg);
+      padding: 2.5rem;
+      transition: background-color 0.3s ease;
+    }
+
+    .login-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .login-logo-img {
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 1rem;
+      display: block;
+      object-fit: contain;
+    }
+
+    .login-logo {
+      font-family: var(--font-serif);
+      font-size: 2rem;
+      font-weight: 600;
+      color: var(--color-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .login-subtitle {
+      font-size: 0.95rem;
+      color: var(--color-text-light);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      border-bottom: 2px solid var(--color-border);
+    }
+
+    .tab {
+      flex: 1;
+      padding: 0.75rem;
+      border: none;
+      background: none;
+      color: var(--color-text-light);
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      position: relative;
+      transition: color 0.2s ease;
+    }
+
+    .tab:hover {
+      color: var(--color-text);
+    }
+
+    .tab.active {
+      color: var(--color-primary);
+    }
+
+    .tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--color-primary);
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--color-text);
+      margin-bottom: 0.5rem;
+    }
+
+    .input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      background: var(--color-bg);
+      color: var(--color-text);
+      transition: all 0.2s ease;
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    .input::placeholder {
+      color: var(--color-text-light);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 0.875rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 500;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: var(--color-primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--color-primary-dark);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary:disabled {
+      background: var(--color-text-light);
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--color-text);
+      border: 1px solid var(--color-border);
+      margin-top: 0.75rem;
+    }
+
+    .btn-secondary:hover {
+      background: var(--color-bg);
+    }
+
+    .error-message {
+      padding: 0.75rem 1rem;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid var(--color-error);
+      border-radius: 8px;
+      color: var(--color-error);
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+      display: none;
+    }
+
+    .error-message.visible {
+      display: block;
+    }
+
+    .success-message {
+      padding: 0.75rem 1rem;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid var(--color-success);
+      border-radius: 8px;
+      color: var(--color-success);
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+      display: none;
+    }
+
+    .success-message.visible {
+      display: block;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 1.5rem 0;
+      color: var(--color-text-light);
+      font-size: 0.875rem;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--color-border);
+    }
+
+    .divider span {
+      padding: 0 1rem;
+    }
+
+    .link {
+      color: var(--color-primary);
+      text-decoration: none;
+      font-size: 0.875rem;
+    }
+
+    .link:hover {
+      text-decoration: underline;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    .theme-toggle {
+      position: absolute;
+      top: 1.5rem;
+      right: 1.5rem;
+      padding: 0.5rem;
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      background: var(--color-surface);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .theme-toggle:hover {
+      background: var(--color-bg);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .password-requirements {
+      font-size: 0.75rem;
+      color: var(--color-text-light);
+      margin-top: 0.25rem;
+    }
+
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    @media (max-width: 480px) {
+      .login-card {
+        padding: 2rem 1.5rem;
+      }
+
+      .login-logo-img {
+        width: 80px;
+        height: 80px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="5"/>
+      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+    </svg>
+  </button>
+
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <img src="assets/logo.png" alt="Habit Tracker Logo" class="login-logo-img">
+        <h1 class="login-logo">Habit Tracker</h1>
+        <p class="login-subtitle">Track your habits, build better routines</p>
+      </div>
+
+      <div class="tabs">
+        <button type="button" class="tab active" data-tab="signin">Sign In</button>
+        <button type="button" class="tab" data-tab="signup">Sign Up</button>
+      </div>
+
+      <div class="error-message" id="errorMessage"></div>
+      <div class="success-message" id="successMessage"></div>
+
+      <!-- Sign In Tab -->
+      <div class="tab-content active" id="signin-content">
+        <form id="signinForm">
+          <div class="form-group">
+            <label for="signinEmail" class="label">Email</label>
+            <input 
+              type="email" 
+              id="signinEmail" 
+              class="input" 
+              placeholder="you@example.com" 
+              required 
+              autocomplete="email"
+            >
+          </div>
+          <div class="form-group">
+            <label for="signinPassword" class="label">Password</label>
+            <input 
+              type="password" 
+              id="signinPassword" 
+              class="input" 
+              placeholder="••••••••" 
+              required 
+              minlength="6"
+              autocomplete="current-password"
+            >
+          </div>
+          <button type="submit" class="btn btn-primary" id="signinBtn">Sign In</button>
+        </form>
+      </div>
+
+      <!-- Sign Up Tab -->
+      <div class="tab-content" id="signup-content">
+        <form id="signupForm">
+          <div class="form-group">
+            <label for="signupEmail" class="label">Email</label>
+            <input 
+              type="email" 
+              id="signupEmail" 
+              class="input" 
+              placeholder="you@example.com" 
+              required 
+              autocomplete="email"
+            >
+          </div>
+          <div class="form-group">
+            <label for="signupPassword" class="label">Password</label>
+            <input 
+              type="password" 
+              id="signupPassword" 
+              class="input" 
+              placeholder="••••••••" 
+              required 
+              minlength="6"
+              autocomplete="new-password"
+            >
+            <div class="password-requirements">
+              Must be at least 6 characters long
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="signupPasswordConfirm" class="label">Confirm Password</label>
+            <input 
+              type="password" 
+              id="signupPasswordConfirm" 
+              class="input" 
+              placeholder="••••••••" 
+              required 
+              minlength="6"
+              autocomplete="new-password"
+            >
+          </div>
+          <button type="submit" class="btn btn-primary" id="signupBtn">Create Account</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+    import {
+      getDatabase,
+      ref,
+      get,
+      set,
+      child
+    } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
+    import { firebaseConfig } from './firebase-config.js';
+
+    // Initialize Firebase
+    let app, database;
+    let firebaseReady = false;
+    let isAuthenticating = false; // Flag to prevent double redirects
+    let lastRedirectTime = 0; // Track when last redirect happened
+    
+    // Redirect guard - prevent redirect loops
+    function canRedirect() {
+      const now = Date.now();
+      if (now - lastRedirectTime < 2000) { // 2 second cooldown
+        console.warn('⚠️ REDIRECT BLOCKED - too soon after last redirect (loop protection)');
+        return false;
+      }
+      lastRedirectTime = now;
+      return true;
+    }
+    
+    try {
+      app = initializeApp(firebaseConfig);
+      database = getDatabase(app);
+      firebaseReady = true;
+      console.log('✅ Firebase initialized successfully');
+    } catch (error) {
+      console.error('❌ Firebase initialization failed:', error);
+      showError('Firebase configuration error. Please check your setup.');
+    }
+
+    // Theme toggle
+    const themeToggle = document.getElementById('themeToggle');
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+
+    themeToggle.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    });
+
+    // Tab switching
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const targetTab = tab.dataset.tab;
+        
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        tabContents.forEach(content => {
+          content.classList.remove('active');
+          if (content.id === targetTab + '-content') {
+            content.classList.add('active');
+          }
+        });
+
+        hideMessages();
+      });
+    });
+
+    // Message handling
+    const errorMessage = document.getElementById('errorMessage');
+    const successMessage = document.getElementById('successMessage');
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.classList.add('visible');
+      successMessage.classList.remove('visible');
+    }
+
+    function showSuccess(message) {
+      successMessage.textContent = message;
+      successMessage.classList.add('visible');
+      errorMessage.classList.remove('visible');
+    }
+
+    function hideMessages() {
+      errorMessage.classList.remove('visible');
+      successMessage.classList.remove('visible');
+    }
+
+    function setLoading(isLoading) {
+      const forms = document.querySelectorAll('form');
+      const buttons = document.querySelectorAll('button[type="submit"]');
+      
+      forms.forEach(form => {
+        if (isLoading) {
+          form.classList.add('loading');
+        } else {
+          form.classList.remove('loading');
+        }
+      });
+
+      buttons.forEach(btn => {
+        btn.disabled = isLoading;
+      });
+    }
+
+    // Helper functions
+    async function hashPassword(password) {
+      // Simple hash function using Web Crypto API
+      const encoder = new TextEncoder();
+      const data = encoder.encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function generateUserId() {
+      return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    function validateEmail(email) {
+      const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return re.test(email);
+    }
+
+    async function createUser(email, password) {
+      if (!validateEmail(email)) {
+        throw new Error('Invalid email address');
+      }
+      
+      if (password.length < 6) {
+        throw new Error('Password must be at least 6 characters');
+      }
+
+      const usersRef = ref(database, 'users');
+      const snapshot = await get(usersRef);
+      
+      // Check if email already exists
+      if (snapshot.exists()) {
+        const users = snapshot.val();
+        for (const uid in users) {
+          if (users[uid].email === email) {
+            throw new Error('Email already in use');
+          }
+        }
+      }
+
+      // Create new user
+      const userId = generateUserId();
+      const hashedPassword = await hashPassword(password);
+      
+      await set(ref(database, `users/${userId}`), {
+        email: email,
+        password: hashedPassword,
+        createdAt: Date.now()
+      });
+
+      return { userId, email };
+    }
+
+    async function signInUser(email, password) {
+      if (!validateEmail(email)) {
+        throw new Error('Invalid email address');
+      }
+
+      const usersRef = ref(database, 'users');
+      const snapshot = await get(usersRef);
+      
+      if (!snapshot.exists()) {
+        throw new Error('No account found with this email');
+      }
+
+      const users = snapshot.val();
+      const hashedPassword = await hashPassword(password);
+      
+      // Find user by email and verify password
+      for (const uid in users) {
+        if (users[uid].email === email) {
+          if (users[uid].password === hashedPassword) {
+            // Store user session
+            sessionStorage.setItem('currentUser', JSON.stringify({
+              userId: uid,
+              email: email
+            }));
+            return { userId: uid, email: email };
+          } else {
+            throw new Error('Incorrect password');
+          }
+        }
+      }
+      
+      throw new Error('No account found with this email');
+    }
+
+    function checkFirebaseReady() {
+      if (!firebaseReady) {
+        showError('Firebase is not initialized. Please refresh the page.');
+        return false;
+      }
+      return true;
+    }
+
+    // Sign In
+    const signinForm = document.getElementById('signinForm');
+    signinForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!checkFirebaseReady()) return;
+      
+      hideMessages();
+      setLoading(true);
+      isAuthenticating = true; // Set flag to prevent auto-redirect
+
+      const email = document.getElementById('signinEmail').value.trim();
+      const password = document.getElementById('signinPassword').value;
+
+      try {
+        console.log('🔄 Attempting sign in...');
+        const user = await signInUser(email, password);
+        console.log('✅ Sign in successful:', user.email);
+        console.log('📦 Session stored:', sessionStorage.getItem('currentUser'));
+        showSuccess('Sign in successful! Redirecting...');
+        
+        // Redirect with guard
+        setTimeout(() => {
+          if (canRedirect()) {
+            console.log('🔄 Redirecting to index.html...');
+            window.location.href = 'index.html';
+          }
+        }, 300);
+      } catch (error) {
+        console.error('❌ Sign in error:', error);
+        showError(error.message || 'Sign in failed. Please try again.');
+        setLoading(false);
+        isAuthenticating = false; // Reset flag on error
+      }
+    });
+
+    // Sign Up
+    const signupForm = document.getElementById('signupForm');
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!checkFirebaseReady()) return;
+      
+      hideMessages();
+      isAuthenticating = true; // Set flag to prevent auto-redirect
+
+      const email = document.getElementById('signupEmail').value.trim();
+      const password = document.getElementById('signupPassword').value;
+      const passwordConfirm = document.getElementById('signupPasswordConfirm').value;
+
+      if (password !== passwordConfirm) {
+        showError('Passwords do not match.');
+        isAuthenticating = false;
+        return;
+      }
+
+      if (password.length < 6) {
+        showError('Password must be at least 6 characters.');
+        isAuthenticating = false;
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        console.log('🔄 Creating account...');
+        const user = await createUser(email, password);
+        console.log('✅ Account created:', user.email);
+        
+        // Auto sign in after signup
+        sessionStorage.setItem('currentUser', JSON.stringify(user));
+        console.log('📦 Session stored:', sessionStorage.getItem('currentUser'));
+        
+        showSuccess('Account created successfully! Redirecting...');
+        
+        // Redirect with guard
+        setTimeout(() => {
+          if (canRedirect()) {
+            console.log('🔄 Redirecting to index.html...');
+            window.location.href = 'index.html';
+          }
+        }, 300);
+      } catch (error) {
+        console.error('❌ Sign up error:', error);
+        showError(error.message || 'Sign up failed. Please try again.');
+        setLoading(false);
+        isAuthenticating = false; // Reset flag on error
+      }
+    });
+
+    // Check if user is already signed in - but only check once page fully loads
+    // and NOT if we're in the middle of authenticating
+    window.addEventListener('load', () => {
+      // Don't auto-redirect if user is actively signing in/up
+      if (isAuthenticating) {
+        console.log('⏳ Authentication in progress, skipping auto-redirect check');
+        return;
+      }
+
+      const currentUser = sessionStorage.getItem('currentUser');
+      if (currentUser) {
+        try {
+          const user = JSON.parse(currentUser);
+          if (user && user.userId && user.email) {
+            console.log('✅ User already authenticated, redirecting from load event...');
+            if (canRedirect()) {
+              window.location.href = 'index.html';
+            }
+          }
+        } catch (e) {
+          // Invalid session, clear it
+          console.warn('⚠️ Invalid session found, clearing...');
+          sessionStorage.removeItem('currentUser');
+        }
+      }
+    });
+  </script>
+</body>
+</html>
